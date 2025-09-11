@@ -1,0 +1,8 @@
+[build-system]
+requires = ["setuptools>=42", "cromulent>=0.16.8", "requests", "ujson", "SPARQLWrapper", "dateutils", "edtf", "dateparser", "shapely", "lxml", "numpy", "bs4", "pyluach", "beautifulsoup4"]
+
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lamcp"
+version = "0.0.1"

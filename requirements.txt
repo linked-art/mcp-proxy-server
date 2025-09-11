@@ -1,0 +1,12 @@
+cromulent>=1.0.1
+requests
+ujson
+SPARQLWrapper
+dateutils
+edtf
+dateparser
+shapely
+lxml
+numpy
+bs4
+pyluach
