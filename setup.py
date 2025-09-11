@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="lamcp",
     version="0.0.1",
-    packages=find_packages(),
+    packages=find_packages(where="lamcp"),
     install_requires=[
         "requests",
         "cromulent>=1.0.1",
