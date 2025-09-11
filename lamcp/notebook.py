@@ -13,7 +13,6 @@ from lamcp.sources.lux.searcher import LuxSearcher
 cfg = {
     "name": "wikidata",
     "namespace": "http://www.wikidata.org/entity/",
-    "matches": ["wikidata.org/entity/", "wikidata.org/wiki/"],
     "fetch": "https://www.wikidata.org/wiki/Special:EntityData/{identifier}.json",
 }
 
@@ -21,7 +20,6 @@ cfg = {
 cfg2 = {
     "name": "nomisma",
     "namespace": "http://nomisma.org/id/",
-    "matches": ["nomisma.org"],
     "fetch": "http://nomisma.org/id/{identifier}.jsonld",
 }
 
@@ -29,7 +27,6 @@ cfg2 = {
 cfg3 = {
     "name": "lux",
     "namespace": "https://lux.collections.yale.edu/data/",
-    "matches": ["lux.collections.yale.edu"],
     "fetch": "https://lux.collections.yale.edu/data/{identifier}",
     "wikidata_property": ["P"],
 }
@@ -41,7 +38,6 @@ configs = {
     "lux": {"fetcher": LuxFetcher(cfg3), "mapper": LuxMapper(cfg3), "searcher": LuxSearcher(cfg3)},
 }
 
-# configs["nomisma"]["mapper"].fetcher = configs["nomisma"]["fetcher"]
 configs["wikidata"]["mapper"].fetcher = configs["wikidata"]["fetcher"]
 
 
@@ -123,7 +119,8 @@ def map_record(dataset, record, entity_type):
 @lru_cache(maxsize=1000)
 def make_simple_reference(dataset, identifier, entity_type=""):
     if identifier.startswith("http"):
-        identifier = identifier.rsplit("/", 1)[-1]
+        namespace = configs[dataset]["namespace"]
+        identifier = identifier.replace(namespace, "")
     data = fetch_record(dataset, identifier, entity_type)
     rec = map_record(dataset, data, entity_type)
     if not rec:
