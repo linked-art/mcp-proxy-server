@@ -1,4 +1,4 @@
-from ..base.fetcher import Fetcher
+from lamcp.sources.base.fetcher import Fetcher
 
 
 class WikidataFetcher(Fetcher):
