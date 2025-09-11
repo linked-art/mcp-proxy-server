@@ -12,7 +12,7 @@ class Searcher:
         # Implement base search logic here
         """Run the query and return URI results"""
 
-        qurl = self.endpoint.format(QUERY=query, LANG=lang)
+        qurl = self.endpoint.format(QUERY=query, LANG=lang, ENTITY_TYPE=entity_type)
         resp = requests.get(qurl, headers=self.headers)
         if resp.status_code == 200:
             return resp.json()

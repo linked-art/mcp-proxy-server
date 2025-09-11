@@ -5,13 +5,13 @@ from functools import lru_cache
 from lamcp.sources.wikidata.fetcher import WikidataFetcher
 from lamcp.sources.wikidata.mapper import WikidataMapper
 from lamcp.sources.wikidata.searcher import WikidataSearcher
-# from lamcp.sources.pleiades.fetcher import PleiadesFetcher
-# from lamcp.sources.pleiades.mapper import PleiadesMapper
+from lamcp.sources.lux.fetcher import LuxFetcher
+from lamcp.sources.lux.mapper import LuxMapper
+from lamcp.sources.lux.searcher import LuxSearcher
 
 
 cfg = {
     "name": "wikidata",
-    "type": "external",
     "namespace": "http://www.wikidata.org/entity/",
     "matches": ["wikidata.org/entity/", "wikidata.org/wiki/"],
     "fetch": "https://www.wikidata.org/wiki/Special:EntityData/{identifier}.json",
@@ -20,7 +20,6 @@ cfg = {
 
 cfg2 = {
     "name": "nomisma",
-    "type": "external",
     "namespace": "http://nomisma.org/id/",
     "matches": ["nomisma.org"],
     "fetch": "http://nomisma.org/id/{identifier}.jsonld",
@@ -28,28 +27,29 @@ cfg2 = {
 
 
 cfg3 = {
-    "name": "pleiades",
-    "type": "external",
-    "namespace": "https://pleiades.stoa.org/places/",
-    "matches": ["pleiades.stoa.org"],
-    "fetch": "https://pleiades.stoa.org/places/{identifier}/json",
-    "wikidata_property": ["P950"],
+    "name": "lux",
+    "namespace": "https://lux.collections.yale.edu/data/",
+    "matches": ["lux.collections.yale.edu"],
+    "fetch": "https://lux.collections.yale.edu/data/{identifier}",
+    "wikidata_property": ["P"],
 }
 
 
 configs = {
     "wikidata": {"fetcher": WikidataFetcher(cfg), "mapper": WikidataMapper(cfg), "searcher": WikidataSearcher(cfg)},
     #    "nomisma": {"fetcher": NomismaFetcher(cfg2), "mapper": NomismaMapper(cfg2)},
-    #    "pleiades": {"fetcher": PleiadesFetcher(cfg3), "mapper": PleiadesMapper(cfg3)},
+    "lux": {"fetcher": LuxFetcher(cfg3), "mapper": LuxMapper(cfg3), "searcher": LuxSearcher(cfg3)},
 }
 
 # configs["nomisma"]["mapper"].fetcher = configs["nomisma"]["fetcher"]
 configs["wikidata"]["mapper"].fetcher = configs["wikidata"]["fetcher"]
-# configs["pleiades"]["mapper"].fetcher = configs["pleiades"]["fetcher"]
 
 
 # Query Wikidata by name
 # https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&search=Alfred+Stieglitz&language=en
+
+# Query LUX
+# https://lux.collections.yale.edu/api/search/agent?q={...}
 
 # Query Nomisma
 # https://nomisma.org/feed/?q=type:%22nmo:Mint%22%20AND%20argos
