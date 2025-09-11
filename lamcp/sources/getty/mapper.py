@@ -1,6 +1,6 @@
 from cromulent import model, vocab
-from lux_pipeline.process.base.mapper import Mapper
-from lux_pipeline.process.utils.date_utils import test_birth_death, make_datetime
+from ..base.mapper import Mapper
+from ..base.date_utils import test_birth_death, make_datetime
 import datetime
 import logging
 
@@ -506,7 +506,7 @@ class TgnMapper(GettyMapper):
         # get the numeric and reapply to the namespace :(
         myid = f"http://vocab.getty.edu/{self.name}/{myid}"
 
-        if rectype is None:
+        if not rectype:
             topcls = self.guess_type(rec)
         else:
             topcls = getattr(model, rectype)
@@ -560,3 +560,22 @@ class TgnMapper(GettyMapper):
 
         data = model.factory.toJSON(top)
         return {"identifier": record["identifier"], "data": data, "source": "tgn"}
+
+
+class GettyMagicMapper(Mapper):
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        self.ulan = UlanMapper(cfg)
+        self.tgn = TgnMapper(cfg)
+        self.aat = AatMapper(cfg)
+
+    def transform(self, record, rectype, reference=False):
+        ident = record["identifier"]
+        if ident.startswith("aat/"):
+            # call to aat mapper
+            return self.aat.transform(record, rectype, reference)
+        elif ident.startswith("tgn/"):
+            return self.tgn.transform(record, rectype, reference)
+        else:
+            # ulan
+            return self.ulan.transform(record, rectype, reference)

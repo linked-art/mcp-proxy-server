@@ -1,4 +1,4 @@
-from lux_pipeline.process.base.fetcher import Fetcher
+from ..base.fetcher import Fetcher
 import requests
 import ujson as json
 import os
@@ -10,51 +10,12 @@ import os
 class GettyFetcher(Fetcher):
     def __init__(self, config):
         Fetcher.__init__(self, config)
-        fn = os.path.join(config["all_configs"].data_dir, "getty_replacements.json")
-        if os.path.exists(fn):
-            with open(fn) as fh:
-                data = fh.read()
-        else:
-            pass
-        try:
-            js = json.loads(data)
-        except:
-            js = {"results": {"bindings": []}}
-        self.redirects = {}
-        res = js["results"]["bindings"]
-        for r in res:
-            f = r["from"]["value"].replace("http://vocab.getty.edu/", "")
-            t = r["to"]["value"].replace("http://vocab.getty.edu/", "")
-            self.redirects[f] = t
-
-        fn = os.path.join(config["all_configs"].data_dir, "unidentified_people_ulan.csv")
-        self.bad_ulan_people = {}
-        if os.path.exists(fn):
-            with open(fn) as fh:
-                data = fh.readlines()
-            for l in data:
-                if "http://vocab.getty.edu/ulan/" in l:
-                    l = l.replace("http://vocab.getty.edu/ulan/", "").strip()
-                    self.bad_ulan_people[l] = 1
 
     def validate_identifier(self, identifier):
-        if identifier in self.bad_ulan_people:
-            return False
-        else:
-            return super().validate_identifier(identifier)
+        return True
 
     def fetch(self, identifier):
-        if not self.enabled:
-            return None
-
         # Should have dealt with -agent and -place upstream!
-        if not identifier.isnumeric():
-            print(f"Getty fetcher got bad identifier: {identifier}")
-            return None
-
-        f = f"{self.name}/{identifier}"
-        if f in self.redirects:
-            identifier = self.redirects[f].split("/")[1]
 
         result = Fetcher.fetch(self, identifier)
 
@@ -71,7 +32,6 @@ class GettyFetcher(Fetcher):
                 resp = self.session.get(newurl)
             except Exception as e:
                 # FIXME: Log network failure
-                self.networkmap[newurl] = 0
                 print(e)
                 return None
             if resp.status_code == 200:
@@ -89,7 +49,6 @@ class GettyFetcher(Fetcher):
                     self.networkmap[old] = newid
                     return res
             else:
-                self.networkmap[newurl] = resp.status_code
                 return None
             return {"data": result, "identifier": identifier, "source": self.name}
         else:

@@ -8,6 +8,9 @@ from lamcp.sources.wikidata.searcher import WikidataSearcher
 from lamcp.sources.lux.fetcher import LuxFetcher
 from lamcp.sources.lux.mapper import LuxMapper
 from lamcp.sources.lux.searcher import LuxSearcher
+from lamcp.sources.getty.fetcher import GettyFetcher
+from lamcp.sources.getty.mapper import GettyMagicMapper
+from lamcp.sources.getty.searcher import GettySearcher
 
 
 cfg = {
@@ -31,45 +34,30 @@ cfg3 = {
     "wikidata_property": ["P"],
 }
 
+cfg4 = {
+    "name": "ulan",
+    "namespace": "http://vocab.getty.edu/",
+    "fetch": "http://vocab.getty.edu/{identifier}.jsonld",
+}
 
 configs = {
     "wikidata": {"fetcher": WikidataFetcher(cfg), "mapper": WikidataMapper(cfg), "searcher": WikidataSearcher(cfg)},
     #    "nomisma": {"fetcher": NomismaFetcher(cfg2), "mapper": NomismaMapper(cfg2)},
     "lux": {"fetcher": LuxFetcher(cfg3), "mapper": LuxMapper(cfg3), "searcher": LuxSearcher(cfg3)},
+    "ulan": {"fetcher": GettyFetcher(cfg4), "mapper": GettyMagicMapper(cfg4), "searcher": GettySearcher(cfg4)},
 }
 
 configs["wikidata"]["mapper"].fetcher = configs["wikidata"]["fetcher"]
 
-
-# Query Wikidata by name
-# https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&search=Alfred+Stieglitz&language=en
-
-# Query LUX
-# https://lux.collections.yale.edu/api/search/agent?q={...}
-
 # Query Nomisma
 # https://nomisma.org/feed/?q=type:%22nmo:Mint%22%20AND%20argos
 
-# Query Pleaides
-# Can't be done?
 
-# getty
-# select ?Subject ?Term ?Parents ?Descr ?ScopeNote ?Type (coalesce(?Type1,?Type2) as ?ExtraType) {
-#  ?Subject luc:term "fishing* AND vessel*"; a ?typ.
-#  ?typ rdfs:subClassOf gvp:Subject; rdfs:label ?Type.
-#  filter (?typ != gvp:Subject)
-#  optional {?Subject gvp:placeTypePreferred [gvp:prefLabelGVP [xl:literalForm ?Type1]]}
-#  optional {?Subject gvp:agentTypePreferred [gvp:prefLabelGVP [xl:literalForm ?Type2]]}
-#  optional {?Subject gvp:prefLabelGVP [xl:literalForm ?Term]}
-#  optional {?Subject gvp:parentStringAbbrev ?Parents}
-#  optional {?Subject foaf:focus/gvp:biographyPreferred/schema:description ?Descr}
-#  optional {?Subject skos:scopeNote [dct:language gvp_lang:en; rdf:value ?ScopeNote]}
-# }
-
-
-# LUX
+# WHG https://whgazetteer.org/api/index/?name=thebes
 #
 
+# Pleiades https://github.com/isawnyu/pleiades_search_api
+#
 
 # Linked Art Constants
 #
@@ -119,9 +107,11 @@ def map_record(dataset, record, entity_type):
 @lru_cache(maxsize=1000)
 def make_simple_reference(dataset, identifier, entity_type=""):
     if identifier.startswith("http"):
-        namespace = configs[dataset]["namespace"]
+        namespace = configs[dataset]["mapper"].namespace
         identifier = identifier.replace(namespace, "")
     data = fetch_record(dataset, identifier, entity_type)
+    if not data:
+        return None
     rec = map_record(dataset, data, entity_type)
     if not rec:
         return None
@@ -135,7 +125,8 @@ def make_simple_reference(dataset, identifier, entity_type=""):
 def make_simple_record(dataset, uri, entity_type=""):
     try:
         outrec, rec = make_simple_reference(dataset, uri, entity_type)
-    except Exception:
+    except Exception as e:
+        print(f"Failed to map from {dataset} to LA: {e}")
         return None
     if "classified_as" in rec:
         outrec["classifications"] = []
@@ -324,7 +315,7 @@ def do_basic_name_search(datasets: str, entity_name: str, name_lang: str, entity
         if searcher is not None:
             # Here search for matches on name
             res = searcher.search(name, name_lang, entity_type)
-
+            print(res)
             for uri in res["results"][:10]:
                 outrec = make_simple_record(ds, uri, entity_type)
                 if outrec is not None:
