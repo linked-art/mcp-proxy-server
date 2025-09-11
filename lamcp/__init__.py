@@ -1,3 +1,3 @@
-from sources import *
+from lamcp.sources import *
 
 __all__ = ["notebook", "sources"]
