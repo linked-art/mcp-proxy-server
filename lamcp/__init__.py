@@ -1,3 +1,3 @@
-from sources import configs
+from .sources import configs
 
 __all__ = ["notebook", "sources"]
