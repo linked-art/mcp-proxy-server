@@ -1,12 +1,12 @@
 from functools import lru_cache
 
-from lamcp.sources.nomisma.fetcher import NomismaFetcher
-from lamcp.sources.nomisma.mapper import NomismaMapper
+# from lamcp.sources.nomisma.fetcher import NomismaFetcher
+# from lamcp.sources.nomisma.mapper import NomismaMapper
 from lamcp.sources.wikidata.fetcher import WikidataFetcher
 from lamcp.sources.wikidata.mapper import WikidataMapper
 from lamcp.sources.wikidata.searcher import WikidataSearcher
-from lamcp.sources.pleiades.fetcher import PleiadesFetcher
-from lamcp.sources.pleiades.mapper import PleiadesMapper
+# from lamcp.sources.pleiades.fetcher import PleiadesFetcher
+# from lamcp.sources.pleiades.mapper import PleiadesMapper
 
 
 cfg = {
@@ -39,13 +39,13 @@ cfg3 = {
 
 configs = {
     "wikidata": {"fetcher": WikidataFetcher(cfg), "mapper": WikidataMapper(cfg), "searcher": WikidataSearcher(cfg)},
-    "nomisma": {"fetcher": NomismaFetcher(cfg2), "mapper": NomismaMapper(cfg2)},
-    "pleiades": {"fetcher": PleiadesFetcher(cfg3), "mapper": PleiadesMapper(cfg3)},
+    #    "nomisma": {"fetcher": NomismaFetcher(cfg2), "mapper": NomismaMapper(cfg2)},
+    #    "pleiades": {"fetcher": PleiadesFetcher(cfg3), "mapper": PleiadesMapper(cfg3)},
 }
 
-configs["nomisma"]["mapper"].fetcher = configs["nomisma"]["fetcher"]
+# configs["nomisma"]["mapper"].fetcher = configs["nomisma"]["fetcher"]
 configs["wikidata"]["mapper"].fetcher = configs["wikidata"]["fetcher"]
-configs["pleiades"]["mapper"].fetcher = configs["pleiades"]["fetcher"]
+# configs["pleiades"]["mapper"].fetcher = configs["pleiades"]["fetcher"]
 
 
 # Query Wikidata by name
