@@ -1,9 +1,9 @@
 # http://nomisma.org/ontology
 # 7468 records total
 
-from sources.base.mapper import Mapper
+from ..base.mapper import Mapper
 from cromulent import model, vocab
-from sources.base.date_utils import make_datetime
+from ..base.date_utils import make_datetime
 
 
 class NomismaMapper(Mapper):

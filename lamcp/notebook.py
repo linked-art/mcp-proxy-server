@@ -1,17 +1,5 @@
-from async_lru import alru_cache
-
-import asyncio
-import uvloop
-from hypercorn.config import Config as HyperConfig
-from hypercorn.asyncio import serve as hypercorn_serve
-
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi_mcp import FastApiMCP
-
-from sources import configs
-
+from .sources import configs
+from functools import lru_cache
 
 # Query Wikidata by name
 # https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&search=Alfred+Stieglitz&language=en
@@ -44,16 +32,6 @@ from sources import configs
 #
 PRIMARY = "http://vocab.getty.edu/aat/300404670"
 
-app = FastAPI()
-origins = ["*"]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 def get_primary_name(names):
     candidates = []
@@ -70,30 +48,37 @@ def get_primary_name(names):
     return candidates[0] if candidates else None
 
 
+@lru_cache(maxsize=100)
 def fetch_record(dataset, identifier, entity_type=""):
     """Fetch a record from the dataset and map to linked art"""
 
     if dataset not in configs:
         raise ValueError(f"Invalid dataset: {dataset}")
     fetcher = configs[dataset]["fetcher"]
-    mapper = configs[dataset]["mapper"]
 
     print(f"Fetching {identifier} from {dataset}")
     record = fetcher.fetch(identifier)
-    print(f"Mapping to LA")
+    return record
+
+
+# @lru_cache(maxsize=100)
+def map_record(dataset, record, entity_type):
+    print(f"Mapping to LA...")
+    mapper = configs[dataset]["mapper"]
     la = mapper.transform(record, entity_type)
     if la is not None:
-        print(la["data"])
         return la["data"]
     else:
-        print(f"Failed to map {identifier} to LA")
+        print(f"Failed to map from {dataset} to LA")
         return None
 
 
+@lru_cache(maxsize=1000)
 def make_simple_reference(dataset, identifier, entity_type=""):
     if identifier.startswith("http"):
         identifier = identifier.rsplit("/", 1)[-1]
-    rec = fetch_record(dataset, identifier, entity_type)
+    data = fetch_record(dataset, identifier, entity_type)
+    rec = map_record(dataset, data, entity_type)
     if not rec:
         return None
     outrec = {}
@@ -121,8 +106,7 @@ def make_simple_record(dataset, uri, entity_type=""):
         for stmt in rec["referred_to_by"]:
             if "language" in stmt:
                 langs = [x.get("equivalent", [{"id": None}])[0]["id"] for x in stmt.get("language", [])]
-                if ENGLISH not in langs:
-                    continue
+
             desc = {"content": stmt["content"]}
             if "classified_as" in stmt:
                 desc["classifications"] = []
@@ -265,8 +249,7 @@ def make_simple_record(dataset, uri, entity_type=""):
     return outrec
 
 
-@app.get("/api/basic/search_by_name", operation_id="search_by_name")
-async def do_basic_name_search(datasets: str, entity_name: str, name_lang: str, entity_type: str):
+def do_basic_name_search(datasets: str, entity_name: str, name_lang: str, entity_type: str):
     """
     Search for the top 20 entities in the given scope by their exact name.
     The `id` fields of references within the records can be used with the get_by_id tool to retrieve their full records.
@@ -290,21 +273,23 @@ async def do_basic_name_search(datasets: str, entity_name: str, name_lang: str, 
 
     name = entity_name.lower()
     datasets = datasets.split(",")
-
-    # Here search for matches
-
     recs = []
-    for r in res["results"][:20]:
-        uri = r[0]
-        outrec = make_simple_record(uri)
-        if outrec is not None:
-            recs.append(outrec)
+
+    for ds in datasets:
+        searcher = configs.get(ds, {}).get("searcher", None)
+        if searcher is not None:
+            # Here search for matches on name
+            res = searcher.search(name, name_lang, entity_type)
+
+            for uri in res["results"][:10]:
+                outrec = make_simple_record(ds, uri, entity_type)
+                if outrec is not None:
+                    recs.append(outrec)
 
     return recs
 
 
-@app.get("/api/basic/get", operation_id="get_by_id")
-async def do_basic_fetch(dataset: str, identifier: str, entity_type: str):
+def do_basic_fetch(dataset: str, identifier: str, entity_type: str):
     """
     Fetch a single entity by its identifier using `id` within a record, from a specific dataset
 
@@ -318,40 +303,4 @@ async def do_basic_fetch(dataset: str, identifier: str, entity_type: str):
     identifier = str(identifier)
     print(f"Got: {dataset} , {identifier} , {entity_type}")
     outrec = make_simple_record(dataset, identifier, entity_type)
-    print(outrec)
-    return JSONResponse(outrec)
-
-
-# @app.get("/api/basic/explain", operation_id="get_schema")
-# async def do_explain_schema():
-#    pass
-
-
-# --- Main Execution ---
-if __name__ == "__main__":
-    print("Starting hypercorn https/2 server...")
-    uvloop.install()
-    hconfig = HyperConfig()
-    hconfig.bind = [f"0.0.0.0:5002"]
-    hconfig.loglevel = "INFO"
-    hconfig.accesslog = "-"
-    hconfig.errorlog = "-"
-    hconfig.certfile = f"files/localhost.pem"
-    hconfig.keyfile = f"files/localhost-key.pem"
-    mcp = FastApiMCP(
-        app,
-        name="LUX MCP Server",
-        describe_all_responses=False,
-        describe_full_response_schema=False,
-        include_operations=[
-            "get_statistics",
-            "get_record",
-            "translate_string_query",
-            "search",
-            "facet",
-            "search_by_name",
-            "get_by_id",
-        ],
-    )
-    mcp.mount_http()
-    asyncio.run(hypercorn_serve(app, hconfig))
+    return outrec

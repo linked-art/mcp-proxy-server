@@ -1,4 +1,4 @@
-from sources.base.fetcher import Fetcher
+from ..base.fetcher import Fetcher
 
 
 # works

@@ -1,6 +1,6 @@
 from .base import WdConfigManager
-from sources.base.mapper import Mapper
-from sources.base.date_utils import make_datetime
+from ..base.mapper import Mapper
+from ..base.date_utils import make_datetime
 from cromulent import model, vocab
 from shapely.geometry import Polygon
 

@@ -2,6 +2,7 @@ from .nomisma.fetcher import NomismaFetcher
 from .nomisma.mapper import NomismaMapper
 from .wikidata.fetcher import WikidataFetcher
 from .wikidata.mapper import WikidataMapper
+from .wikidata.searcher import WikidataSearcher
 from .pleiades.fetcher import PleiadesFetcher
 from .pleiades.mapper import PleiadesMapper
 
@@ -35,7 +36,7 @@ cfg3 = {
 
 
 configs = {
-    "wikidata": {"fetcher": WikidataFetcher(cfg), "mapper": WikidataMapper(cfg)},
+    "wikidata": {"fetcher": WikidataFetcher(cfg), "mapper": WikidataMapper(cfg), "searcher": WikidataSearcher(cfg)},
     "nomisma": {"fetcher": NomismaFetcher(cfg2), "mapper": NomismaMapper(cfg2)},
     "pleiades": {"fetcher": PleiadesFetcher(cfg3), "mapper": PleiadesMapper(cfg3)},
 }
