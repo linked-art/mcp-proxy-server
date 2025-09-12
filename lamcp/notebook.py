@@ -1,7 +1,9 @@
-from functools import lru_cache
+import sys
 
-# from lamcp.sources.nomisma.fetcher import NomismaFetcher
-# from lamcp.sources.nomisma.mapper import NomismaMapper
+# from functools import lru_cache
+from cache_to_disk import cache_to_disk
+import argparse
+
 from lamcp.sources.wikidata.fetcher import WikidataFetcher
 from lamcp.sources.wikidata.mapper import WikidataMapper
 from lamcp.sources.wikidata.searcher import WikidataSearcher
@@ -11,6 +13,9 @@ from lamcp.sources.lux.searcher import LuxSearcher
 from lamcp.sources.getty.fetcher import GettyFetcher
 from lamcp.sources.getty.mapper import GettyMagicMapper
 from lamcp.sources.getty.searcher import GettySearcher
+from lamcp.sources.pleiades.fetcher import PleiadesFetcher
+from lamcp.sources.pleiades.mapper import PleiadesMapper
+from lamcp.sources.pleiades.searcher import PleiadesSearcher
 
 
 cfg = {
@@ -21,9 +26,9 @@ cfg = {
 
 
 cfg2 = {
-    "name": "nomisma",
-    "namespace": "http://nomisma.org/id/",
-    "fetch": "http://nomisma.org/id/{identifier}.jsonld",
+    "name": "pleiades",
+    "namespace": "https://pleiades.stoa.org/places/",
+    "fetch": "https://pleiades.stoa.org/places/{identifier}/json",
 }
 
 
@@ -31,7 +36,6 @@ cfg3 = {
     "name": "lux",
     "namespace": "https://lux.collections.yale.edu/data/",
     "fetch": "https://lux.collections.yale.edu/data/{identifier}",
-    "wikidata_property": ["P"],
 }
 
 cfg4 = {
@@ -42,23 +46,22 @@ cfg4 = {
 
 configs = {
     "wikidata": {"fetcher": WikidataFetcher(cfg), "mapper": WikidataMapper(cfg), "searcher": WikidataSearcher(cfg)},
-    #    "nomisma": {"fetcher": NomismaFetcher(cfg2), "mapper": NomismaMapper(cfg2)},
+    "pleiades": {
+        "fetcher": PleiadesFetcher(cfg2),
+        "mapper": PleiadesMapper(cfg2),
+        "searcher": PleiadesSearcher(cfg2),
+    },
     "lux": {"fetcher": LuxFetcher(cfg3), "mapper": LuxMapper(cfg3), "searcher": LuxSearcher(cfg3)},
     "getty": {"fetcher": GettyFetcher(cfg4), "mapper": GettyMagicMapper(cfg4), "searcher": GettySearcher(cfg4)},
 }
 
 configs["wikidata"]["mapper"].fetcher = configs["wikidata"]["fetcher"]
 
+
+parser = argparse.ArgumentParser(prog="notebook", description="Generate candidate entries for a name of an entity")
+
 # Query Nomisma
 # https://nomisma.org/feed/?q=type:%22nmo:Mint%22%20AND%20argos
-#
-
-# WHG
-# https://whgazetteer.org/api/index/?name=thebes
-# (no actual reason to use WHG?)
-
-# Pleiades
-# https://github.com/isawnyu/pleiades_search_api
 #
 
 
@@ -76,25 +79,21 @@ def get_primary_name(names):
                 return name
             else:
                 candidates.append(name)
-
     candidates.sort(key=lambda x: len(x.get("language", [])), reverse=True)
     return candidates[0] if candidates else None
 
 
-@lru_cache(maxsize=100)
+@cache_to_disk(5)
 def fetch_record(dataset, identifier, entity_type=""):
     """Fetch a record from the dataset and map to linked art"""
-
     if dataset not in configs:
         raise ValueError(f"Invalid dataset: {dataset}")
     fetcher = configs[dataset]["fetcher"]
-
     print(f"Fetching {identifier} from {dataset}")
     record = fetcher.fetch(identifier)
     return record
 
 
-# @lru_cache(maxsize=100)
 def map_record(dataset, record, entity_type):
     print(f"Mapping to LA...")
     mapper = configs[dataset]["mapper"]
@@ -106,7 +105,7 @@ def map_record(dataset, record, entity_type):
         return None
 
 
-@lru_cache(maxsize=1000)
+# @cache_to_disk(5)
 def make_simple_reference(dataset, identifier, entity_type=""):
     if identifier.startswith("http"):
         namespace = configs[dataset]["mapper"].namespace
@@ -171,6 +170,15 @@ def make_simple_record(dataset, uri, entity_type=""):
                 outrec["part_of"].append(make_simple_reference(dataset, parent["id"])[0])
             except Exception:
                 continue
+
+    if "member_of" in rec:
+        outrec["member_of"] = []
+        for parent in rec["member_of"]:
+            try:
+                outrec["member_of"].append(make_simple_reference(dataset, parent["id"])[0])
+            except Exception:
+                continue
+
     if rec["type"] == "Person":
         if "born" in rec:
             # split into birthDate and birthPlace
@@ -188,7 +196,7 @@ def make_simple_record(dataset, uri, entity_type=""):
                 outrec["deathPlace"] = make_simple_reference(dataset, rec["died"]["took_place_at"][0]["id"])[0]
     elif rec["type"] == "Group":
         if "formed_by" in rec:
-            # split into birthDate and birthPlace
+            # split as per Person
             if "timespan" in rec["formed_by"]:
                 if "begin_of_the_begin" in rec["formed_by"]["timespan"]:
                     outrec["foundingDate"] = rec["formed_by"]["timespan"]["begin_of_the_begin"]
@@ -202,7 +210,7 @@ def make_simple_record(dataset, uri, entity_type=""):
                 ]
 
         if "dissolved_by" in rec:
-            # split into deathDate and deathPlace
+            # split as per Person
             if "timespan" in rec["dissolved_by"]:
                 if "begin_of_the_begin" in rec["dissolved_by"]["timespan"]:
                     outrec["dissolutionDate"] = rec["dissolved_by"]["timespan"]["begin_of_the_begin"]
@@ -214,6 +222,10 @@ def make_simple_record(dataset, uri, entity_type=""):
                 outrec["dissolver"] = make_simple_reference(dataset, rec["dissolved_by"]["carried_out_by"][0]["id"])[
                     0
                 ]
+    elif rec["type"] == "Place":
+        # add coordinates
+        outrec["coordinates"] = rec.get("defined_by", "")
+
     elif rec["type"] == "HumanMadeObject":
         # made_of
         # carries/shows -- embed this
@@ -275,14 +287,6 @@ def make_simple_record(dataset, uri, entity_type=""):
         if "represents" in rec:
             outrec["represents"] = [make_simple_reference(dataset, x["id"])[0] for x in rec["represents"]]
 
-    if "member_of" in rec:
-        outrec["member_of"] = []
-        for parent in rec["member_of"]:
-            try:
-                outrec["member_of"].append(make_simple_reference(dataset, parent["id"])[0])
-            except Exception:
-                continue
-
     return outrec
 
 
@@ -317,13 +321,12 @@ def do_basic_name_search(datasets: str, entity_name: str, name_lang: str, entity
         if searcher is not None:
             # Here search for matches on name
             res = searcher.search(name, name_lang, entity_type)
-            print(res)
             for uri in res["results"][:10]:
                 outrec = make_simple_record(ds, uri, entity_type)
                 if outrec is not None:
                     recs.append(outrec)
 
-    return recs
+    return {"candidates": recs}
 
 
 def do_basic_fetch(dataset: str, identifier: str, entity_type: str):
@@ -331,13 +334,28 @@ def do_basic_fetch(dataset: str, identifier: str, entity_type: str):
     Fetch a single entity by its identifier using `id` within a record, from a specific dataset
 
     Parameters:
-        - dataset (str): The dataset to search within
+        - dataset (str): The dataset to retrieve the record from
         - identifier (str): The identifier of the entity to fetch
 
     Returns:
         - candidate (dict): The description of the entity, including links to other entities
     """
-    identifier = str(identifier)
-    print(f"Got: {dataset} , {identifier} , {entity_type}")
     outrec = make_simple_record(dataset, identifier, entity_type)
-    return outrec
+    return {"candidate": outrec}
+
+
+if __name__ == "__main__":
+    parser.add_argument("--name", help="The name of the entity to search for")
+    parser.add_argument("--lang", default="en", help="The language of the name")
+    parser.add_argument("--type", default="Person", help="The type or class of entity")
+    parser.add_argument("--datasets", default="all", help="The datasets to search")
+
+    args = parser.parse_args()
+
+    if args.datasets == "all":
+        dss = ",".join(configs.keys())
+    else:
+        dss = args.datasets
+
+    print(f"Searching {dss} for {args.type}'{args.name}'")
+    candidates = do_basic_name_search(dss, args.name, args.lang, args.type)
