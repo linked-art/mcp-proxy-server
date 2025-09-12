@@ -44,23 +44,25 @@ configs = {
     "wikidata": {"fetcher": WikidataFetcher(cfg), "mapper": WikidataMapper(cfg), "searcher": WikidataSearcher(cfg)},
     #    "nomisma": {"fetcher": NomismaFetcher(cfg2), "mapper": NomismaMapper(cfg2)},
     "lux": {"fetcher": LuxFetcher(cfg3), "mapper": LuxMapper(cfg3), "searcher": LuxSearcher(cfg3)},
-    "ulan": {"fetcher": GettyFetcher(cfg4), "mapper": GettyMagicMapper(cfg4), "searcher": GettySearcher(cfg4)},
+    "getty": {"fetcher": GettyFetcher(cfg4), "mapper": GettyMagicMapper(cfg4), "searcher": GettySearcher(cfg4)},
 }
 
 configs["wikidata"]["mapper"].fetcher = configs["wikidata"]["fetcher"]
 
 # Query Nomisma
 # https://nomisma.org/feed/?q=type:%22nmo:Mint%22%20AND%20argos
-
-
-# WHG https://whgazetteer.org/api/index/?name=thebes
 #
 
-# Pleiades https://github.com/isawnyu/pleiades_search_api
+# WHG
+# https://whgazetteer.org/api/index/?name=thebes
+# (no actual reason to use WHG?)
+
+# Pleiades
+# https://github.com/isawnyu/pleiades_search_api
 #
+
 
 # Linked Art Constants
-#
 PRIMARY = "http://vocab.getty.edu/aat/300404670"
 
 
