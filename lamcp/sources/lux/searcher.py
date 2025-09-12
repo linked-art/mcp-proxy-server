@@ -12,10 +12,14 @@ class LuxSearcher(Searcher):
     def search(self, query, lang="", entity_type=""):
         if entity_type in ["Person", "Group"]:
             qurl = self.endpoint + "agent?"
+            if entity_type == "Person":
+                q = {"AND": [{"recordType": "person"}, {"name": query}]}
+            elif entity_type == "Group":
+                q = {"AND": [{"recordType": "group"}, {"name": query}]}
         elif entity_type == "Place":
             qurl = self.endpoint + "place?"
+            q = {"AND": [{"name": query}]}
 
-        q = {"AND": [{"recordType": "person"}, {"name": query}]}
         qec = urlencode({"q": json.dumps(q)})
         qurl += qec
         resp = requests.get(qurl, headers=self.headers)
