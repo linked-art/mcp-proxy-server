@@ -5,7 +5,7 @@ from lxml import etree
 from .date_utils import make_datetime
 import logging
 
-logger = logging.getLogger("lux_pipeline")
+logger = logging.getLogger("lamcp")
 
 model.ExternalResource._write_override = None
 # monkey patch in members_exemplified_by for Set and Group

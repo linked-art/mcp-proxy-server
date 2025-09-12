@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 import logging
 
-logger = logging.getLogger("lux_pipeline")
+logger = logging.getLogger("lamcp")
 
 # Note -- MaskedPrecision was removed from edtf, so removing as fuzzy parser
 

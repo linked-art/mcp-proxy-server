@@ -4,7 +4,7 @@ from ..base.date_utils import test_birth_death, make_datetime
 import datetime
 import logging
 
-logger = logging.getLogger("lux_pipeline")
+logger = logging.getLogger("lamcp")
 
 
 class GettyMapper(Mapper):

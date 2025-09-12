@@ -2,7 +2,7 @@ import requests
 import ujson as json
 import logging
 
-logger = logging.getLogger("lux_pipeline")
+logger = logging.getLogger("lamcp")
 
 
 class Fetcher(object):
