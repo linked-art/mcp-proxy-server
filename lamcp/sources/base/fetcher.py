@@ -63,7 +63,6 @@ class Fetcher(object):
                     data = {"value": resp.text, "ct": ct, "error": "json parse failed"}
             else:
                 # Might still be json
-                content = resp.text
                 data = {"value": resp.text, "ct": ct}
             data = self.post_process(data, identifier)
         else:

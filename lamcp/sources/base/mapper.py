@@ -2,7 +2,6 @@ import re
 from cromulent import model, vocab
 from lxml import etree
 
-from .date_utils import make_datetime
 import logging
 
 logger = logging.getLogger("lamcp")
@@ -120,14 +119,6 @@ class Mapper(object):
         self.debug = False
         self.acquirer = None
 
-        self.single_century_regex = re.compile(
-            r"(early|mid|late)?\s*(\d{1,2})(?:st|nd|rd|th) century$", re.IGNORECASE
-        )
-        self.range_centuries_regex = re.compile(
-            r"(early|mid|late)?\s*(\d{1,2})(?:st|nd|rd|th) century\s*-\s*(early|mid|late)?\s*(\d{1,2})(?:st|nd|rd|th) century",
-            re.IGNORECASE,
-        )
-
     def make_export_filename(self, name, my_slice):
         return f"export_{name}_{my_slice}.jsonl"
 
@@ -168,9 +159,6 @@ class Mapper(object):
             return crmcls(ident=self.expand_uri(identifier), label=frec["data"].get("_label", ""))
         else:
             return None
-
-    def post_mapping(self, record, xformtype=None):
-        return record
 
     def transform(self, record, rectype, reference=False):
         # No op
